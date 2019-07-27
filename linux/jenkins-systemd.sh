@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 if type apt > /dev/null; then
     pkg_mgr=apt
     java="openjdk-8-jre"
@@ -7,13 +7,13 @@ elif type yum /dev/null; then
     java="java"
 fi
 echo "installing dependencies"
-sudo ${pkg_mgr} install -y ${java} wget
+sudo ${pkg_mgr} install -y ${java} wget > /dev/null
 echo "configuring jenkins user"
 sudo useradd -m -s /bin/bash jenkins
 echo "downloading latest jenkins WAR"
 sudo su - jenkins -c "curl -L https://updates.jenkins-ci.org/latest/jenkins.war --output jenkins.war"
 echo "setting up jenkins service"
-sudo tee /etc/systemd/system/jenkins.service << EOF
+sudo tee /etc/systemd/system/jenkins.service << EOF > /dev/null
 [Unit]
 Description=Jenkins Server
 
@@ -26,12 +26,17 @@ ExecStart=/usr/bin/java -jar /home/jenkins/jenkins.war
 WantedBy=multi-user.target
 EOF
 sudo systemctl daemon-reload
-sudo systemctl enable --now jenkins
+sudo systemctl enable jenkins
+sudo systemctl restart jenkins
 sudo su - jenkins << EOF
 until [ -f .jenkins/secrets/initialAdminPassword ]; do
 	sleep 1
 	echo "waiting for initial admin password"
 done
-echo "initial admin password: $(cat .jenkins/secrets/initialAdminPassword)"
+until [[ -n "\$(cat  .jenkins/secrets/initialAdminPassword)" ]]; do
+	sleep 1
+	echo "waiting for initial admin password"
+done
+echo "initial admin password: \$(cat .jenkins/secrets/initialAdminPassword)"
 EOF
 
