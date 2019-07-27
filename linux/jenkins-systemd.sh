@@ -7,11 +7,11 @@ elif type yum /dev/null; then
     java="java"
 fi
 echo "installing dependencies"
-sudo ${pkg_mgr} install -y ${java} curl
+sudo ${pkg_mgr} install -y ${java} wget
 echo "configuring jenkins user"
-sudo useradd -m -s /bin/bash
+sudo useradd -m -s /bin/bash jenkins
 echo "downloading latest jenkins WAR"
-sudo su - jenkins -c "curl https://updates.jenkins-ci.org/latest/jenkins.war -O"
+sudo su - jenkins -c "curl -L https://updates.jenkins-ci.org/latest/jenkins.war --output jenkins.war"
 echo "setting up jenkins service"
 sudo tee /etc/systemd/system/jenkins.service << EOF
 [Unit]
@@ -27,3 +27,11 @@ WantedBy=multi-user.target
 EOF
 sudo systemctl daemon-reload
 sudo systemctl enable --now jenkins
+sudo su - jenkins << EOF
+until [ -f .jenkins/secrets/initialAdminPassword ]; do
+	sleep 1
+	echo "waiting for initial admin password"
+done
+echo "initial admin password: $(cat .jenkins/secrets/initialAdminPassword)"
+EOF
+
